@@ -33,7 +33,21 @@ ISLAMIC_WORDS = [
     "سورة", "آية", "اللهم", "سبحان", "الصحابة", "الصحابي", "عبادة", "الصيام",
     "الزكاة", "الحج", "العمرة", "التقوى", "الدين", "المسلم", "المسلمين",
 ]
-BLOCKED_OUTPUT = ["እግዚአብሔር", "ኢየሱስ", "ክርስቶስ", "መስቀል", "ቤተ ክርስቲያን"]
+BLOCKED_OUTPUT = ["ኢየሱስ", "ክርስቶስ", "መስቀል", "ቤተ ክርስቲያን"]
+
+# Google Translate «الله» ን ብዙ ጊዜ «እግዚአብሔር» ብሎ ይተረጉማል፤ ወደ «አላህ» እንቀይራለን
+REPLACEMENTS = [
+    ("እግዚአብሔርን", "አላህን"),
+    ("እግዚአብሔር", "አላህ"),
+    ("እግዚአብሄርን", "አላህን"),
+    ("እግዚአብሄር", "አላህ"),
+]
+
+
+def clean_amharic(text):
+    for a, b in REPLACEMENTS:
+        text = text.replace(a, b)
+    return text
 
 
 def is_islamic(arabic_text):
@@ -125,6 +139,7 @@ def translator_loop():
         for ch in SOURCES:
             try:
                 posts = fetch_posts(ch)
+                print(f"{ch}: fetched {len(posts)} posts, last_seen={last_seen.get(ch)}")
                 if ch not in last_seen:
                     # የመጀመሪያ ጊዜ: የድሮ ፖስቶችን አይለጥፍም፣ ከአሁን በኋላ ያሉትን ብቻ
                     last_seen[ch] = max([p[0] for p in posts], default=0)
@@ -133,11 +148,18 @@ def translator_loop():
                 new = sorted(p for p in posts if p[0] > last_seen[ch])
                 for pid, text in new:
                     last_seen[ch] = max(last_seen[ch], pid)
-                    if len(text) < 30 or not is_islamic(text):
+                    if len(text) < 30:
+                        print(f"{ch}#{pid}: skipped (too short)")
                         continue
-                    am = translate(text)
+                    if not is_islamic(text):
+                        print(f"{ch}#{pid}: skipped (not islamic by filter)")
+                        continue
+                    am = clean_amharic(translate(text))
                     if am and output_ok(am):
-                        send(am)
+                        ok = send(am)
+                        print(f"{ch}#{pid}: translated and sent={ok}")
+                    else:
+                        print(f"{ch}#{pid}: skipped (blocked words in translation)")
             except Exception as e:
                 print("translator error:", ch, e)
         time.sleep(CHECK_EVERY)
@@ -208,7 +230,7 @@ def prepare_daily(text):
     if re.search(r"[\u1200-\u137F]", text):
         return text
     try:
-        am = translate(text)
+        am = clean_amharic(translate(text))
         if am and output_ok(am):
             return am
     except Exception as e:
@@ -273,6 +295,11 @@ class Ping(BaseHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"ok")
+
+    def do_HEAD(self):
+        # UptimeRobot (ነጻ እቅድ) HEAD ጥያቄ ይልካል
+        self.send_response(200)
+        self.end_headers()
 
     def log_message(self, *a):
         pass
