@@ -13,7 +13,7 @@ TOKEN = os.environ["BOT_TOKEN"]
 CHANNEL = os.environ.get("CHANNEL", "@abubekrabdu_official")
 START_DATE = os.environ["START_DATE"]  # ለምሳሌ 2026-10-19 (የመጀመሪያው ቀን)
 
-SOURCES = ["shffaaaaa", "tratealcom"]   # ከነዚህ ቻናሎች ተርጉሞ ይለጥፋል
+SOURCES = ["shffaaaaa", "tratealcom", "Qetafelafanein", "RasaelAlquraan"]   # ከነዚህ ቻናሎች ተርጉሞ ይለጥፋል
 CHECK_EVERY = 600                       # በየ 10 ደቂቃ ይፈትሻል
 
 TZ = timezone(timedelta(hours=3))       # የኢትዮጵያ ሰዓት (UTC+3)
