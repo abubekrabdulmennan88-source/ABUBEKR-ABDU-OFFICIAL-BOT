@@ -13,7 +13,7 @@ TOKEN = os.environ["BOT_TOKEN"]
 CHANNEL = os.environ.get("CHANNEL", "@abubekrabdu_official")
 START_DATE = os.environ["START_DATE"]  # ለምሳሌ 2026-10-19 (የመጀመሪያው ቀን)
 
-SOURCES = ["shffaaaaa", "tratealcom", "Qetafelafanein", "RasaelAlquraan"]   # ከነዚህ ቻናሎች ተርጉሞ ይለጥፋል
+SOURCES = ["shffaaaaa", "tratealcom"]   # ከነዚህ ቻናሎች ተርጉሞ ይለጥፋል
 CHECK_EVERY = 600                       # በየ 10 ደቂቃ ይፈትሻል
 
 TZ = timezone(timedelta(hours=3))       # የኢትዮጵያ ሰዓት (UTC+3)
@@ -22,6 +22,9 @@ STORY_TIME = (21, 0)                    # ታሪክ: 9:00 PM (ማታ 3:00)
 MIN_WORDS = int(os.environ.get("MIN_WORDS", "0"))        # ለምሳሌ 80 ካደረግህ ከ80 ቃል በታች ያሉ አይለጠፉም
 MAX_WORDS = int(os.environ.get("MAX_WORDS", "100000"))   # ለምሳሌ 120
 WINDOW_MIN = 5                          # ከሰዓቱ በኋላ እስከ 5 ደቂቃ ውስጥ ይለጥፋል
+
+# ታሪኩ በcode block (COPY CODE) እንዲላክ ከፈለግህ True አድርግ
+STORY_AS_CODE = False
 
 API = f"https://api.telegram.org/bot{TOKEN}"
 
@@ -59,7 +62,9 @@ def output_ok(amharic_text):
 
 
 # ---------- ቴሌግራም መላክ ----------
-def send(text):
+def send(text, code=True):
+    """code=True: በcode block (<pre>) ይልካል፣ COPY CODE ቁልፍ ይታያል።
+    code=False: ተራ ጽሁፍ ይልካል።"""
     text = text.strip()
     while text:
         chunk = text[:4000]
@@ -67,9 +72,13 @@ def send(text):
             cut = chunk.rfind("\n")
             if cut > 1000:
                 chunk = chunk[:cut]
+        payload = {"chat_id": CHANNEL, "text": chunk}
+        if code:
+            payload["text"] = "<pre>" + html.escape(chunk) + "</pre>"
+            payload["parse_mode"] = "HTML"
         r = requests.post(
             f"{API}/sendMessage",
-            data={"chat_id": CHANNEL, "text": chunk},
+            data=payload,
             timeout=30,
         )
         if not r.ok:
@@ -277,7 +286,7 @@ def scheduler_loop():
                     done.add(key)
                     if name == "story":
                         if day < len(story):
-                            send(story[day])
+                            send(story[day], code=STORY_AS_CODE)
                     else:
                         idx = day * len(DAILY_TIMES) + int(name[1:])
                         if idx < len(posts):
